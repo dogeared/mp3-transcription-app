@@ -1,0 +1,40 @@
+server:
+  port: 8080
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          okta:
+            client-id: 
+            client-secret: 
+            scope:
+              - openid
+              - profile
+              - email
+        provider:
+          okta:
+            issuer-uri: 
+  
+  # File upload configuration
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+
+# AssemblyAI Configuration
+assemblyai:
+  api-key: 
+
+# Vaadin Configuration
+vaadin:
+  # Enable production mode for better performance
+  productionMode: false
+
+# Logging configuration
+logging:
+  level:
+    com.example.transcriber: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG 
