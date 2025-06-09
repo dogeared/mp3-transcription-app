@@ -1,0 +1,48 @@
+server:
+  port: 0  # Use random port for tests
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+  
+  # Security configuration for tests
+  security:
+    user:
+      name: testuser
+      password: testpass
+      roles: USER
+  
+  # File upload configuration
+  servlet:
+    multipart:
+      max-file-size: 50MB  # Smaller for tests
+      max-request-size: 50MB
+
+# AssemblyAI Configuration
+assemblyai:
+  api-key: test-api-key
+
+# Vaadin Configuration
+vaadin:
+  productionMode: false
+
+# Disable management security for tests
+management:
+  security:
+    enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: ["health", "info"]
+
+# Test-specific logging levels
+logging:
+  level:
+    com.example.transcriber: WARN
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.springframework.boot.autoconfigure.security: WARN
+    org.springframework.boot.autoconfigure: WARN 

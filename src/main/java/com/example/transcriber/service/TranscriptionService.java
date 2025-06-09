@@ -10,6 +10,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -23,14 +24,20 @@ import java.util.function.Consumer;
 @Service
 public class TranscriptionService {
 
-    private static final String ASSEMBLYAI_BASE_URL = "https://api.assemblyai.com/v2";
-    
+    private final String baseUrl;
     private final String apiKey;
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;
 
+    @Autowired
     public TranscriptionService(@Value("${assemblyai.api-key}") String apiKey) {
+        this(apiKey, "https://api.assemblyai.com/v2");
+    }
+
+    // Constructor for testing
+    public TranscriptionService(String apiKey, String baseUrl) {
         this.apiKey = apiKey;
+        this.baseUrl = baseUrl;
         this.httpClient = new OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)
@@ -46,7 +53,7 @@ public class TranscriptionService {
         RequestBody fileBody = RequestBody.create(audioFile, MediaType.parse("audio/mpeg"));
         
         Request request = new Request.Builder()
-                .url(ASSEMBLYAI_BASE_URL + "/upload")
+                .url(baseUrl + "/upload")
                 .header("Authorization", apiKey)
                 .post(fileBody)
                 .build();
@@ -79,7 +86,7 @@ public class TranscriptionService {
         RequestBody body = RequestBody.create(jsonBody, JSON);
         
         Request request = new Request.Builder()
-                .url(ASSEMBLYAI_BASE_URL + "/transcript")
+                .url(baseUrl + "/transcript")
                 .header("Authorization", apiKey)
                 .header("Content-Type", "application/json")
                 .post(body)
@@ -101,7 +108,7 @@ public class TranscriptionService {
      */
     private TranscriptResponse pollForCompletion(String transcriptId, Consumer<String> progressCallback) throws IOException, InterruptedException {
         Request request = new Request.Builder()
-                .url(ASSEMBLYAI_BASE_URL + "/transcript/" + transcriptId)
+                .url(baseUrl + "/transcript/" + transcriptId)
                 .header("Authorization", apiKey)
                 .get()
                 .build();
