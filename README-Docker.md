@@ -19,9 +19,9 @@ docker build -t mp3-transcriber:latest .
 docker run -d \
   --name mp3-transcriber-app \
   -p 8080:8080 \
-  -e OKTA_CLIENT_ID="your-client-id" \
-  -e OKTA_CLIENT_SECRET="your-client-secret" \
-  -e OKTA_ISSUER_URI="https://your-domain.okta.com/oauth2/default" \
+  -e AUTH0_CLIENT_ID="your-client-id" \
+  -e AUTH0_CLIENT_SECRET="your-client-secret" \
+  -e AUTH0_ISSUER_URI="https://your-domain.auth0.com/" \
   -e ASSEMBLYAI_API_KEY="your-assemblyai-api-key" \
   mp3-transcriber:latest
 ```
@@ -52,9 +52,9 @@ The following environment variables **MUST** be configured:
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `OKTA_CLIENT_ID` | Okta OAuth2 Client ID | ✅ Yes |
-| `OKTA_CLIENT_SECRET` | Okta OAuth2 Client Secret | ✅ Yes |
-| `OKTA_ISSUER_URI` | Okta OAuth2 Issuer URI | ✅ Yes |
+| `AUTH0_CLIENT_ID` | Auth0 OAuth2 Client ID | ✅ Yes |
+| `AUTH0_CLIENT_SECRET` | Auth0 OAuth2 Client Secret | ✅ Yes |
+| `AUTH0_ISSUER_URI` | Auth0 OAuth2 Issuer URI | ✅ Yes |
 | `ASSEMBLYAI_API_KEY` | AssemblyAI API Key | ✅ Yes |
 | `JAVA_OPTS` | JVM Options | ❌ No (has default) |
 
@@ -126,7 +126,7 @@ The container includes health checks that verify the application is responding c
 1. **Container won't start**: Check logs with `docker logs mp3-transcriber-app`
    - Most common cause: Missing required environment variables
 2. **Port already in use**: Change the host port in docker-compose.yml or Docker run command
-3. **OAuth2 authentication fails**: Verify your Okta configuration and credentials
+3. **OAuth2 authentication fails**: Verify your Auth0 configuration and credentials
 4. **API calls fail**: Verify your AssemblyAI API key
 5. **Missing environment variables**: Ensure all required variables are set in your .env file
 

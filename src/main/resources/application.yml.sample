@@ -6,15 +6,15 @@ spring:
     oauth2:
       client:
         registration:
-          okta:
-            client-id: 
-            client-secret: 
+          auth0:
+            client-id:
+            client-secret:
             scope:
               - openid
               - profile
               - email
         provider:
-          okta:
+          auth0:
             issuer-uri: 
   
   # File upload configuration

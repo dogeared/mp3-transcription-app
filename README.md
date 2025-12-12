@@ -1,10 +1,10 @@
 # MP3 Transcriber
 
-A secure web application for transcribing MP3 files using AssemblyAI, built with Spring Boot, Vaadin Flow, and OAuth2/OIDC authentication via Okta.
+A secure web application for transcribing MP3 files using AssemblyAI, built with Spring Boot, Vaadin Flow, and OAuth2/OIDC authentication via Auth0.
 
 ## Features
 
-- **Secure Authentication**: OAuth2/OIDC with PKCE using Okta
+- **Secure Authentication**: OAuth2/OIDC with PKCE using Auth0
 - **File Upload**: Drag-and-drop MP3/WAV file upload with validation (up to 500MB)
 - **Speaker Diarization**: Assign custom names to speakers in the audio
 - **Audio Transcription**: Upload and transcribe audio files using AssemblyAI's API
@@ -17,7 +17,7 @@ A secure web application for transcribing MP3 files using AssemblyAI, built with
 
 - Java 17 or higher
 - Maven 3.6+
-- Okta Developer Account
+- Auth0 Account
 - AssemblyAI API Key
 
 ## Setup Instructions
@@ -29,18 +29,19 @@ git clone <repository-url>
 cd cursor-transcription-app
 ```
 
-### 2. Configure Okta
+### 2. Configure Auth0
 
-1. Sign up for a free [Okta Developer Account](https://developer.okta.com/)
+1. Sign up for a free [Auth0 Account](https://auth0.com/signup)
 2. Create a new application:
-   - Application Type: Web Application
-   - Grant Types: Authorization Code, PKCE
-   - Sign-in redirect URIs: `http://localhost:8080/login/oauth2/code/okta`
-   - Sign-out redirect URIs: `http://localhost:8080/`
+   - Application Type: Regular Web Application
+   - Go to Settings tab
+   - Allowed Callback URLs: `http://localhost:8080/login/oauth2/code/auth0`
+   - Allowed Logout URLs: `http://localhost:8080/`
+   - Allowed Web Origins: `http://localhost:8080`
 3. Note down your:
    - Client ID
    - Client Secret
-   - Okta Domain (e.g., `https://dev-12345.okta.com`)
+   - Domain (e.g., `dev-12345.auth0.com`)
 
 ### 3. Get AssemblyAI API Key
 
@@ -52,9 +53,9 @@ cd cursor-transcription-app
 Set the following environment variables:
 
 ```bash
-export OKTA_CLIENT_ID=your_okta_client_id
-export OKTA_CLIENT_SECRET=your_okta_client_secret
-export OKTA_ISSUER_URI=https://your-okta-domain.okta.com/oauth2/default
+export AUTH0_CLIENT_ID=your_auth0_client_id
+export AUTH0_CLIENT_SECRET=your_auth0_client_secret
+export AUTH0_ISSUER_URI=https://your-domain.auth0.com/
 export ASSEMBLYAI_API_KEY=your_assemblyai_api_key
 ```
 
@@ -72,8 +73,8 @@ The application will be available at `http://localhost:8080`
 ## Usage
 
 1. **Access Application**: Navigate to `http://localhost:8080`
-2. **Authentication**: Click "Get Started" - you'll be automatically redirected to Okta for authentication
-3. **Login**: Enter your Okta credentials
+2. **Authentication**: Click "Get Started" - you'll be automatically redirected to Auth0 for authentication
+3. **Login**: Enter your Auth0 credentials
 4. **Redirect Back**: After successful authentication, you'll be redirected to the transcriber interface
 5. **Speaker Names**: Enter names for the two speakers in your audio file
 6. **Upload File**: Drag and drop or click to upload your MP3 or WAV file (max 500MB)
@@ -117,7 +118,7 @@ src/
 
 Spring Boot auto-configures OIDC with PKCE support. The configuration uses:
 - Standard OIDC discovery from issuer URI
-- Automatic redirect to Okta's authorization server
+- Automatic redirect to Auth0's authorization server
 - PKCE enabled by default for enhanced security
 - Session-based authentication after successful login
 - Automatic token refresh handled by Spring Security
@@ -148,7 +149,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ## Security Considerations
 
 - All endpoints except the welcome page are protected by OAuth2/OIDC
-- Automatic redirect to Okta for authentication
+- Automatic redirect to Auth0 for authentication
 - PKCE (Proof Key for Code Exchange) is enabled by default in Spring Security
 - Session management handled by Spring Security
 - CSRF protection is disabled for API endpoints
@@ -160,8 +161,8 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ### Common Issues
 
 1. **OAuth2 Configuration Error**
-   - Verify Okta domain, client ID, and secret
-   - Check redirect URIs in Okta application settings
+   - Verify Auth0 domain, client ID, and secret
+   - Check callback URLs in Auth0 application settings
 
 2. **AssemblyAI API Error**
    - Verify API key is correct
