@@ -16,7 +16,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.Upload;
-import com.vaadin.flow.component.upload.receivers.MultiFileMemoryBuffer;
+import com.vaadin.flow.component.upload.receivers.FileBuffer;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.StreamResource;
@@ -27,8 +27,6 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import jakarta.annotation.security.PermitAll;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
@@ -95,7 +93,6 @@ public class TranscriberView extends VerticalLayout {
         
         speaker1Field = new TextField("Speaker 1 Name");
         speaker1Field.setPlaceholder("Enter name for first speaker");
-        speaker1Field.setValue("Tes");
         speaker1Field.setWidth("300px");
         
         speaker2Field = new TextField("Speaker 2 Name");
@@ -111,35 +108,25 @@ public class TranscriberView extends VerticalLayout {
 
     private void createFileUpload() {
         H3 uploadHeader = new H3("Upload MP3 File");
-        
-        MultiFileMemoryBuffer buffer = new MultiFileMemoryBuffer();
+
+        // Use FileBuffer instead of MultiFileMemoryBuffer to stream directly to disk
+        // This prevents memory issues and upload stalling with large files
+        FileBuffer buffer = new FileBuffer();
         upload = new Upload(buffer);
-        
+
         upload.setAcceptedFileTypes("audio/mpeg", "audio/mp3", ".mp3", "audio/wav", ".wav");
         upload.setMaxFiles(1);
         upload.setMaxFileSize(500 * 1024 * 1024); // 500MB
-        
+
         upload.addSucceededListener(event -> {
-            try {
-                // Save uploaded file to temporary location
-                uploadedFile = File.createTempFile("upload_", "_" + event.getFileName());
-                
-                try (FileOutputStream fos = new FileOutputStream(uploadedFile)) {
-                    buffer.getInputStream(event.getFileName()).transferTo(fos);
-                }
-                
-                Notification.show("File uploaded successfully: " + event.getFileName(), 
-                    3000, Notification.Position.TOP_CENTER)
-                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                
-                updateUIState();
-                
-            } catch (IOException e) {
-                log.error("Error saving uploaded file", e);
-                Notification.show("Error uploading file: " + e.getMessage(), 
-                    5000, Notification.Position.TOP_CENTER)
-                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
-            }
+            // FileBuffer already wrote the file to disk, just get the reference
+            uploadedFile = buffer.getFileData().getFile();
+
+            Notification.show("File uploaded successfully: " + event.getFileName(),
+                3000, Notification.Position.TOP_CENTER)
+                .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+
+            updateUIState();
         });
         
         upload.addFileRejectedListener(event -> {
