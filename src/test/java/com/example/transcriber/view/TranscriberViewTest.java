@@ -65,7 +65,7 @@ class TranscriberViewTest {
         assertNotNull(speaker2Field, "Speaker 2 field should be present");
 
         assertEquals("Speaker 1 Name", speaker1Field.getLabel());
-        assertEquals("Tes", speaker1Field.getValue());
+        assertEquals("", speaker1Field.getValue());
         assertEquals("Enter name for first speaker", speaker1Field.getPlaceholder());
         assertEquals("300px", speaker1Field.getWidth());
 

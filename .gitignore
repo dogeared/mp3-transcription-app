@@ -3,3 +3,4 @@
 frontend
 target
 application.yml
+.env
