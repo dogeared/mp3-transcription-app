@@ -1,6 +1,9 @@
 .vscode
 .idea
-frontend
+# Vaadin generated frontend files (keep custom files like chunked-upload.js)
+frontend/generated/
+frontend/node_modules/
+frontend/index.html
 target
 application.yml
 .env
