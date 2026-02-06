@@ -16,6 +16,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/vaadin/**", "/VAADIN/**").permitAll()
                 .requestMatchers("/images/**", "/icons/**", "/static/**", "/webjars/**").permitAll()
+                .requestMatchers("/api/upload/**").authenticated()
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2

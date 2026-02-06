@@ -40,8 +40,8 @@ public class TranscriptionService {
         this.baseUrl = baseUrl;
         this.httpClient = new OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .writeTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(300, TimeUnit.SECONDS)
+                .writeTimeout(600, TimeUnit.SECONDS)
                 .build();
         this.objectMapper = new ObjectMapper();
     }
