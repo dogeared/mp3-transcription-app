@@ -1,13 +1,14 @@
 package com.example.transcriber.view;
 
+import com.example.transcriber.service.ChunkUploadService;
 import com.example.transcriber.service.TranscriptionService;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.Input;
 import com.vaadin.flow.component.progressbar.ProgressBar;
 import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.component.upload.Upload;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,17 +17,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.File;
-import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TranscriberViewTest {
 
     @Mock
     private TranscriptionService transcriptionService;
+
+    @Mock
+    private ChunkUploadService chunkUploadService;
 
     @Mock
     private UI mockUI;
@@ -37,8 +38,8 @@ class TranscriberViewTest {
     void setUp() {
         // Mock the UI.getCurrent() call
         UI.setCurrent(mockUI);
-        
-        transcriberView = new TranscriberView(transcriptionService);
+
+        transcriberView = new TranscriberView(transcriptionService, chunkUploadService);
     }
 
     @Test
@@ -76,11 +77,19 @@ class TranscriberViewTest {
     }
 
     @Test
-    void testUploadConfiguration() {
-        Upload upload = getFieldByAccessor("upload");
-        assertNotNull(upload, "Upload component should be present");
-        assertEquals(1, upload.getMaxFiles());
-        assertEquals(500 * 1024 * 1024, upload.getMaxFileSize());
+    void testFileInputConfiguration() {
+        Input fileInput = getFieldByAccessor("fileInput");
+        assertNotNull(fileInput, "File input component should be present");
+        assertEquals("file", fileInput.getType());
+        assertEquals("chunked-file-input", fileInput.getId().orElse(null));
+    }
+
+    @Test
+    void testSelectFileButtonConfiguration() {
+        Button selectFileButton = getFieldByAccessor("selectFileButton");
+        assertNotNull(selectFileButton, "Select file button should be present");
+        assertEquals("Select Audio File", selectFileButton.getText());
+        assertTrue(selectFileButton.getThemeNames().contains("primary"));
     }
 
     @Test
@@ -93,36 +102,46 @@ class TranscriberViewTest {
     }
 
     @Test
-    void testProgressBarConfiguration() {
-        ProgressBar progressBar = getFieldByAccessor("progressBar");
-        assertNotNull(progressBar, "Progress bar should be present");
-        assertFalse(progressBar.isVisible(), "Progress bar should be hidden initially");
-        assertEquals("400px", progressBar.getWidth());
+    void testUploadProgressBarConfiguration() {
+        ProgressBar uploadProgressBar = getFieldByAccessor("uploadProgressBar");
+        assertNotNull(uploadProgressBar, "Upload progress bar should be present");
+        assertFalse(uploadProgressBar.isVisible(), "Upload progress bar should be hidden initially");
+        assertEquals("400px", uploadProgressBar.getWidth());
+    }
+
+    @Test
+    void testTranscriptionProgressBarConfiguration() {
+        ProgressBar transcriptionProgressBar = getFieldByAccessor("transcriptionProgressBar");
+        assertNotNull(transcriptionProgressBar, "Transcription progress bar should be present");
+        assertFalse(transcriptionProgressBar.isVisible(), "Transcription progress bar should be hidden initially");
+        assertEquals("400px", transcriptionProgressBar.getWidth());
     }
 
     @Test
     void testInitialUIState() {
         Button transcribeButton = getFieldByAccessor("transcribeButton");
-        ProgressBar progressBar = getFieldByAccessor("progressBar");
-        Upload upload = getFieldByAccessor("upload");
+        ProgressBar uploadProgressBar = getFieldByAccessor("uploadProgressBar");
+        ProgressBar transcriptionProgressBar = getFieldByAccessor("transcriptionProgressBar");
+        Button selectFileButton = getFieldByAccessor("selectFileButton");
 
         assertFalse(transcribeButton.isEnabled(), "Transcribe button should be disabled initially");
-        assertFalse(progressBar.isVisible(), "Progress bar should be hidden initially");
-        assertTrue(upload.isVisible(), "Upload should be visible initially");
+        assertFalse(uploadProgressBar.isVisible(), "Upload progress bar should be hidden initially");
+        assertFalse(transcriptionProgressBar.isVisible(), "Transcription progress bar should be hidden initially");
+        assertTrue(selectFileButton.isEnabled(), "Select file button should be enabled initially");
     }
 
     @Test
     void testSpeakerHeadersPresent() {
         boolean foundSpeakerHeader = transcriberView.getChildren()
-                .anyMatch(component -> component instanceof H3 && 
+                .anyMatch(component -> component instanceof H3 &&
                          "Speaker Names".equals(((H3) component).getText()));
-        
+
         assertTrue(foundSpeakerHeader, "Should contain 'Speaker Names' header");
 
         boolean foundUploadHeader = transcriberView.getChildren()
-                .anyMatch(component -> component instanceof H3 && 
+                .anyMatch(component -> component instanceof H3 &&
                          "Upload MP3 File".equals(((H3) component).getText()));
-        
+
         assertTrue(foundUploadHeader, "Should contain 'Upload MP3 File' header");
     }
 
@@ -134,10 +153,10 @@ class TranscriberViewTest {
         // Simulate file upload by setting uploadedFile
         File mockFile = new File("test.mp3");
         ReflectionTestUtils.setField(transcriberView, "uploadedFile", mockFile);
-        
+
         // Call updateUIState method
         ReflectionTestUtils.invokeMethod(transcriberView, "updateUIState");
-        
+
         // Note: This test might need adjustment based on actual file existence check
         // The real implementation checks if file exists, so this test demonstrates the concept
     }
@@ -147,10 +166,24 @@ class TranscriberViewTest {
         // Setup lenient mock to avoid UnnecessaryStubbingException
         // This test just verifies the service injection is working
         assertNotNull(transcriptionService, "TranscriptionService should be injected");
-        
+
         // Verify that the view has access to the service
         TranscriptionService injectedService = (TranscriptionService) ReflectionTestUtils.getField(transcriberView, "transcriptionService");
         assertSame(transcriptionService, injectedService, "Service should be properly injected");
+    }
+
+    @Test
+    void testChunkUploadServiceInjection() {
+        ChunkUploadService injectedService = (ChunkUploadService) ReflectionTestUtils.getField(transcriberView, "chunkUploadService");
+        assertSame(chunkUploadService, injectedService, "ChunkUploadService should be properly injected");
+    }
+
+    @Test
+    void testCancelButtonConfiguration() {
+        Button cancelButton = getFieldByAccessor("cancelButton");
+        assertNotNull(cancelButton, "Cancel button should be present");
+        assertEquals("Cancel Upload", cancelButton.getText());
+        assertFalse(cancelButton.isVisible(), "Cancel button should be hidden initially");
     }
 
     @SuppressWarnings("unchecked")
@@ -165,4 +198,4 @@ class TranscriberViewTest {
     private <T> T getFieldByAccessor(String fieldName) {
         return (T) ReflectionTestUtils.getField(transcriberView, fieldName);
     }
-} 
+}
