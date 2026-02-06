@@ -7,7 +7,7 @@ import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.dependency.JavaScript;
+import com.vaadin.flow.component.dependency.JsModule;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
@@ -37,7 +37,7 @@ import java.util.concurrent.CompletableFuture;
 @Route(value = "/transcriber", layout = MainLayout.class)
 @PageTitle("MP3 Transcriber")
 @PermitAll
-@JavaScript("./chunked-upload.js")
+@JsModule("./chunked-upload.js")
 public class TranscriberView extends VerticalLayout {
 
     private final TranscriptionService transcriptionService;
