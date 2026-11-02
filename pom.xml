@@ -183,6 +183,9 @@
                                 <phase>compile</phase>
                             </execution>
                         </executions>
+                        <configuration>
+                            <requireHomeNodeExec>false</requireHomeNodeExec>
+                        </configuration>
                     </plugin>
                 </plugins>
             </build>
