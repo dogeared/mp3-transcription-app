@@ -12,14 +12,19 @@ src/test/java/com/example/transcriber/
 ├── dto/                    # DTO Unit Tests
 │   └── TranscriptResponseTest.java
 ├── service/                # Service Unit Tests
+│   ├── ChunkUploadServiceTest.java
 │   └── TranscriptionServiceTest.java
 ├── view/                   # View Unit Tests
-│   ├── WelcomeViewTest.java
-│   └── TranscriberViewTest.java
+│   ├── MainLayoutTest.java
+│   ├── TranscriberViewInteractionTest.java
+│   ├── TranscriberViewTest.java
+│   ├── ViewTestSupport.java
+│   └── WelcomeViewTest.java
 ├── config/                 # Configuration Tests
 │   ├── SecurityConfigTest.java
-│   ├── SecurityConfigCsrfTest.java
-│   └── TestSecurityConfig.java
+│   └── SecurityConfigCsrfTest.java
+├── controller/             # REST API Tests
+│   └── ChunkUploadControllerTest.java
 ├── integration/            # Integration Tests
 │   └── TranscriberApplicationIntegrationTest.java
 └── TestSuite.java         # Test Documentation
@@ -62,7 +67,16 @@ src/test/java/com/example/transcriber/
 - Verifies HTTP request structure and headers
 - Tests error propagation and recovery
 
-#### 🔹 View Tests (`WelcomeViewTest`, `TranscriberViewTest`)
+#### 🔹 Chunked Upload Service Tests (`ChunkUploadServiceTest`)
+**Purpose**: Test chunk storage and assembly against a temporary directory
+
+**Coverage**:
+- ✅ Session creation, chunk storage and in-order assembly (chunks may arrive out of order)
+- ✅ Missing chunks, out-of-range chunk indexes, and malformed or unknown upload ids
+- ✅ Uploads are only visible to the user who created them
+- ✅ File name sanitizing, cancel and cleanup, and expiry of idle sessions
+
+#### 🔹 View Tests (`WelcomeViewTest`, `TranscriberViewTest`, `TranscriberViewInteractionTest`, `MainLayoutTest`)
 **Purpose**: Test UI component initialization and configuration
 
 **Coverage**:
@@ -72,7 +86,12 @@ src/test/java/com/example/transcriber/
 - ✅ Button states and themes
 - ✅ Component hierarchy and structure
 
+- ✅ The upload flow driven by the browser: file selected, chunk progress, upload complete, upload error, cancel
+- ✅ Transcription success, failure and progress updates, speaker names (entered or defaulted) and transcript download
+- ✅ The signed-in user's name in the header and welcome text
+
 **Key Features**:
+- `ViewTestSupport` provides a real `UI` whose `access()` runs immediately, plus a signed-in OIDC user
 - Tests Vaadin component initialization
 - Verifies UI component properties and styling
 - Tests service injection and mocking
@@ -100,21 +119,26 @@ src/test/java/com/example/transcriber/
 - Uses `oidcLogin()` and `csrf()` from Spring Security Test
 - Mocks the `ClientRegistrationRepository`, so no identity provider is needed
 
+#### 🔹 REST API Tests (`ChunkUploadControllerTest`)
+**Purpose**: Test every chunked upload endpoint through the production `SecurityConfig`
+
+**Coverage**:
+- ✅ CSRF token endpoint, init, chunk, complete, status and cancel
+- ✅ Error responses: 400 for invalid chunks or missing chunks, 404 for unknown uploads, 500 for storage failures
+- ✅ The signed-in user's subject is what gets passed to the service
+
 ### 3. Integration Tests
 
 #### 🔹 Application Tests (`TranscriberApplicationIntegrationTest`)
-**Purpose**: Test complete application startup and integration
+**Purpose**: Start the real application, with the production `SecurityConfig`, on a random port
 
-> These tests are currently `@Disabled`: loading the full context needs the OAuth2 beans that the
-> test profile excludes.
+The OAuth2 client reads the issuer's discovery document at startup, so the test serves Keycloak-style
+discovery metadata from an OkHttp `MockWebServer` and points `KEYCLOAK_ISSUER_URI` at it.
 
 **Coverage**:
-- ✅ Spring context loading
-- ✅ Application startup with test properties
-- ✅ Endpoint accessibility and security
-- ✅ Service bean injection
-- ✅ Health check endpoints
-- ✅ Vaadin resource availability
+- ✅ Spring context loading, including Vaadin
+- ✅ The login redirect uses the authorization code flow with PKCE (S256) and no client secret
+- ✅ Pages, including the welcome page, and the upload API redirect anonymous users to login
 
 ## Running Tests
 

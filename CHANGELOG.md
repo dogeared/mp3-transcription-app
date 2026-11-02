@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Versions match the
 `<version>` in `pom.xml` and the git tags, which CI creates when a new version reaches `main`.
 
+## [2.0.2] - 2026-11-02
+
+### Added
+- Tests for `ChunkUploadService`, `ChunkUploadController`, `MainLayout` and the upload and
+  transcription flow in `TranscriberView`. Line coverage goes from 40% to 97%.
+
+### Changed
+- The integration tests are back on. They were disabled because the full application needed a live
+  identity provider, and now run the real application and `SecurityConfig` against a stub OIDC
+  provider. They cover the PKCE login redirect, that pages require sign-in, and the upload API. No
+  tests are skipped any more.
+- README: the welcome page also requires sign-in. The README had said it was public.
+
+### Removed
+- Unused test helpers `TestApplication` and `TestSecurityConfig`.
+
+### Security
+- Sessions are tracked with cookies only (`server.servlet.session.tracking-modes=cookie`), so session
+  ids no longer appear in redirect URLs as `;jsessionid=...`.
+
 ## [2.0.1] - 2026-11-02
 
 ### Added
@@ -57,6 +77,7 @@ project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Version
 - OAuth2/OIDC login.
 - Test suite and Docker deployment.
 
+[2.0.2]: https://github.com/dogeared/mp3-transcription-app/compare/2.0.1...2.0.2
 [2.0.1]: https://github.com/dogeared/mp3-transcription-app/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/dogeared/mp3-transcription-app/compare/1.0...2.0.0
 [1.0]: https://github.com/dogeared/mp3-transcription-app/releases/tag/1.0
