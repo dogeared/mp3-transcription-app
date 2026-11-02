@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jammy
+FROM eclipse-temurin:21-jammy
 VOLUME /tmp
 ADD target/*.jar app.jar
 VOLUME /uploads

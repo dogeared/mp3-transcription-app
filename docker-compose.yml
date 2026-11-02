@@ -13,8 +13,8 @@ services:
       # Spring Profile
       - SPRING_PROFILES_ACTIVE=docker
       # OAuth2 Configuration (REQUIRED - set these in .env file or environment)
-      - OKTA_OAUTH2_CLIENT_ID=${OKTA_OAUTH2_CLIENT_ID}
-      - OKTA_OAUTH2_ISSUER=${OKTA_OAUTH2_ISSUER}
+      - KEYCLOAK_ISSUER_URI=${KEYCLOAK_ISSUER_URI}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
       # AssemblyAI API Key (REQUIRED - set this in .env file or environment)
       - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
       # JVM Options
