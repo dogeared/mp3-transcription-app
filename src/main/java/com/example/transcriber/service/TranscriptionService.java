@@ -2,7 +2,7 @@ package com.example.transcriber.service;
 
 
 import com.example.transcriber.dto.TranscriptResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -27,7 +27,7 @@ public class TranscriptionService {
     private final String baseUrl;
     private final String apiKey;
     private final OkHttpClient httpClient;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     @Autowired
     public TranscriptionService(@Value("${assemblyai.api-key}") String apiKey) {
@@ -43,7 +43,7 @@ public class TranscriptionService {
                 .readTimeout(300, TimeUnit.SECONDS)
                 .writeTimeout(600, TimeUnit.SECONDS)
                 .build();
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = new JsonMapper();
     }
 
     /**
@@ -65,7 +65,7 @@ public class TranscriptionService {
             
             String responseBody = response.body().string();
             // Parse JSON response to get upload URL
-            return objectMapper.readTree(responseBody).get("upload_url").asText();
+            return objectMapper.readTree(responseBody).get("upload_url").asString();
         }
     }
 

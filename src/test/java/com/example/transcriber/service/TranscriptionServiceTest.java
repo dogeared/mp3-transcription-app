@@ -1,7 +1,7 @@
 package com.example.transcriber.service;
 
 import com.example.transcriber.dto.TranscriptResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -29,7 +29,7 @@ class TranscriptionServiceTest {
 
     private TranscriptionService transcriptionService;
     private MockWebServer mockWebServer;
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
     private File testAudioFile;
 
     @BeforeEach
@@ -37,7 +37,7 @@ class TranscriptionServiceTest {
         mockWebServer = new MockWebServer();
         mockWebServer.start();
         
-        objectMapper = new ObjectMapper();
+        objectMapper = new JsonMapper();
         
         // Create service with mock server URL using the test constructor
         String baseUrl = mockWebServer.url("/v2").toString().replaceAll("/$", "");

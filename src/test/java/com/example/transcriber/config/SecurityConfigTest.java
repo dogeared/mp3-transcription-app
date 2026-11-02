@@ -2,7 +2,7 @@ package com.example.transcriber.config;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -94,7 +94,7 @@ public class SecurityConfigTest {
         // Test that protected endpoints redirect to login
         mockMvc.perform(get("/transcriber"))
                .andExpect(status().is3xxRedirection())
-               .andExpect(redirectedUrlPattern("**/login"));
+               .andExpect(redirectedUrl("/login"));
     }
 
     @Test
