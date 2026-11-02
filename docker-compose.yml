@@ -23,9 +23,17 @@ services:
       # Mount a volume for temporary file uploads
       - ./uploads:/tmp/uploads
     restart: unless-stopped
+    networks:
+      - default
+      - tnra-shared
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s 
+
+networks:
+  tnra-shared:
+    external: true
+    name: tnra-shared
