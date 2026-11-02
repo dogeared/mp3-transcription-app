@@ -94,7 +94,7 @@ public class ChunkUploadService {
         }
 
         // Write chunk to disk
-        File chunkDestination = new File(session.uploadDir, "chunk_" + chunkIndex);
+        File chunkDestination = fileInUploadDir(session.uploadDir, "chunk_" + chunkIndex);
         try (InputStream is = chunkFile.getInputStream();
              OutputStream os = new FileOutputStream(chunkDestination)) {
             is.transferTo(os);
@@ -125,7 +125,7 @@ public class ChunkUploadService {
         }
 
         // Create final file
-        File assembledFile = new File(session.uploadDir, session.fileName);
+        File assembledFile = fileInUploadDir(session.uploadDir, session.fileName);
 
         try (RandomAccessFile raf = new RandomAccessFile(assembledFile, "rw")) {
             for (int i = 0; i < session.totalChunks; i++) {
@@ -219,6 +219,10 @@ public class ChunkUploadService {
      * Get session only if it belongs to the specified user
      */
     private UploadSession getSessionForUser(String uploadId, String userId) {
+        // Upload ids are server-generated UUIDs; reject anything else before using it
+        if (!isUuid(uploadId)) {
+            return null;
+        }
         UploadSession session = sessions.get(uploadId);
 
         if (session == null) {
@@ -232,6 +236,26 @@ public class ChunkUploadService {
         }
 
         return session;
+    }
+
+    private boolean isUuid(String value) {
+        try {
+            return value != null && UUID.fromString(value).toString().equals(value);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Resolve a file inside an upload directory, refusing anything that escapes it
+     */
+    private File fileInUploadDir(File uploadDir, String name) {
+        Path dir = uploadDir.toPath().toAbsolutePath().normalize();
+        Path file = dir.resolve(name).normalize();
+        if (!file.startsWith(dir)) {
+            throw new IllegalArgumentException("Invalid file name: " + name);
+        }
+        return file.toFile();
     }
 
     /**

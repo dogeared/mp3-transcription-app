@@ -8,6 +8,8 @@ export class ChunkedUploader {
         this.maxRetries = options.maxRetries || 3;
         this.retryDelay = options.retryDelay || 1000; // 1 second base delay
         this.serverElement = options.serverElement; // Vaadin server element for callbacks
+        this.csrfHeader = null; // Spring Security CSRF header name and token, see loadCsrfToken()
+        this.csrfToken = null;
 
         this.file = null;
         this.uploadId = null;
@@ -32,6 +34,8 @@ export class ChunkedUploader {
         this.isCancelled = false;
 
         try {
+            await this.loadCsrfToken();
+
             // Initialize upload session
             const initResponse = await this.initializeUpload();
             this.uploadId = initResponse.uploadId;
@@ -67,13 +71,39 @@ export class ChunkedUploader {
     }
 
     /**
+     * Fetch the session's CSRF token; the upload API rejects state-changing requests without it
+     */
+    async loadCsrfToken() {
+        const response = await fetch('/api/upload/csrf', {
+            method: 'GET',
+            credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to get CSRF token: ${response.status}`);
+        }
+
+        const { headerName, token } = await response.json();
+        this.csrfHeader = headerName;
+        this.csrfToken = token;
+    }
+
+    /**
+     * CSRF header for state-changing requests to the upload API
+     */
+    csrfHeaders() {
+        return this.csrfHeader && this.csrfToken ? { [this.csrfHeader]: this.csrfToken } : {};
+    }
+
+    /**
      * Initialize the upload session
      */
     async initializeUpload() {
         const response = await fetch('/api/upload/init', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...this.csrfHeaders()
             },
             credentials: 'same-origin',
             body: JSON.stringify({
@@ -129,6 +159,7 @@ export class ChunkedUploader {
 
         const response = await fetch(`/api/upload/${this.uploadId}/chunk/${chunkIndex}`, {
             method: 'POST',
+            headers: this.csrfHeaders(),
             credentials: 'same-origin',
             body: formData
         });
@@ -150,6 +181,7 @@ export class ChunkedUploader {
     async completeUpload() {
         const response = await fetch(`/api/upload/${this.uploadId}/complete`, {
             method: 'POST',
+            headers: this.csrfHeaders(),
             credentials: 'same-origin'
         });
 
@@ -171,6 +203,7 @@ export class ChunkedUploader {
             try {
                 await fetch(`/api/upload/${this.uploadId}`, {
                     method: 'DELETE',
+                    headers: this.csrfHeaders(),
                     credentials: 'same-origin'
                 });
             } catch (error) {

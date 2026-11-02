@@ -17,7 +17,9 @@ src/test/java/com/example/transcriber/
 │   ├── WelcomeViewTest.java
 │   └── TranscriberViewTest.java
 ├── config/                 # Configuration Tests
-│   └── SecurityConfigTest.java
+│   ├── SecurityConfigTest.java
+│   ├── SecurityConfigCsrfTest.java
+│   └── TestSecurityConfig.java
 ├── integration/            # Integration Tests
 │   └── TranscriberApplicationIntegrationTest.java
 └── TestSuite.java         # Test Documentation
@@ -79,19 +81,32 @@ src/test/java/com/example/transcriber/
 ### 2. Configuration Tests
 
 #### 🔹 Security Tests (`SecurityConfigTest`)
-**Purpose**: Test Spring Security configuration
+**Purpose**: Test access rules using a form-login stand-in for the OAuth2 setup
 
 **Coverage**:
 - ✅ Public endpoint accessibility
-- ✅ Protected endpoint authentication requirements
-- ✅ OAuth2 login flow initiation
-- ✅ Static resource access permissions
-- ✅ Logout functionality
+- ✅ Protected endpoint authentication requirements (redirect to `/login`)
+- ✅ Logout redirection
+
+#### 🔹 Production Security Tests (`SecurityConfigCsrfTest`)
+**Purpose**: Test the real `SecurityConfig` against the chunked upload API
+
+**Coverage**:
+- ✅ Upload API calls without a CSRF token are rejected (403)
+- ✅ Upload API calls with a CSRF token are accepted
+- ✅ `GET /logout` still logs out
+
+**Key Features**:
+- Uses `oidcLogin()` and `csrf()` from Spring Security Test
+- Mocks the `ClientRegistrationRepository`, so no identity provider is needed
 
 ### 3. Integration Tests
 
 #### 🔹 Application Tests (`TranscriberApplicationIntegrationTest`)
 **Purpose**: Test complete application startup and integration
+
+> These tests are currently `@Disabled`: loading the full context needs the OAuth2 beans that the
+> test profile excludes.
 
 **Coverage**:
 - ✅ Spring context loading
@@ -104,15 +119,14 @@ src/test/java/com/example/transcriber/
 ## Running Tests
 
 ### 🚀 All Tests
+The project includes the Maven wrapper, so use `./mvnw` (no local Maven install needed).
+
 ```bash
-# Run complete test suite
-mvn test
+# Run complete test suite (also writes the JaCoCo coverage report)
+./mvnw test
 
 # Run with detailed output
-mvn test -X
-
-# Run with specific profile
-mvn test -Dspring.profiles.active=test
+./mvnw test -X
 ```
 
 ### 🎯 Specific Test Categories
@@ -120,37 +134,39 @@ mvn test -Dspring.profiles.active=test
 #### Unit Tests Only
 ```bash
 # Run all unit tests (excludes integration tests)
-mvn test -Dtest="*Test" -Dtest.exclude="*IntegrationTest"
+./mvnw test -Dtest='!*IntegrationTest'
 
 # Run specific unit test
-mvn test -Dtest=TranscriptionServiceTest
-mvn test -Dtest=TranscriberViewTest
+./mvnw test -Dtest=TranscriptionServiceTest
+./mvnw test -Dtest=TranscriberViewTest
 ```
 
 #### Integration Tests Only
 ```bash
 # Run integration tests
-mvn test -Dtest="*IntegrationTest"
+./mvnw test -Dtest="*IntegrationTest"
 ```
 
 #### Test by Package
 ```bash
 # Service tests
-mvn test -Dtest="com.example.transcriber.service.*"
+./mvnw test -Dtest="com.example.transcriber.service.*"
 
 # View tests
-mvn test -Dtest="com.example.transcriber.view.*"
+./mvnw test -Dtest="com.example.transcriber.view.*"
 
 # DTO tests
-mvn test -Dtest="com.example.transcriber.dto.*"
+./mvnw test -Dtest="com.example.transcriber.dto.*"
 ```
 
 ### 🔍 Test with Coverage
-```bash
-# Run tests with coverage report
-mvn test jacoco:report
+JaCoCo is configured in `pom.xml` and runs as part of `test`:
 
-# Coverage report location: target/site/jacoco/index.html
+```bash
+./mvnw test
+
+# HTML report: target/site/jacoco/index.html
+# CSV report (used for the coverage badge): target/site/jacoco/jacoco.csv
 ```
 
 ## Test Configuration
@@ -158,7 +174,8 @@ mvn test jacoco:report
 ### Test Properties
 Tests use `src/test/resources/application-test.yml` with:
 - ✅ Random port assignment
-- ✅ Test OAuth2 credentials
+- ✅ OAuth2 client and Spring Boot security auto-configuration excluded
+- ✅ An in-memory test user (`testuser` / `testpass`)
 - ✅ Reduced file size limits
 - ✅ Minimal logging for cleaner output
 - ✅ Test-specific API keys
@@ -201,18 +218,21 @@ assertEquals("300px", field.getWidth());
 
 ## Continuous Integration
 
-### GitHub Actions / CI Pipeline
-```yaml
-# Example CI configuration
-- name: Run Tests
-  run: mvn test
-  
-- name: Run Integration Tests
-  run: mvn test -Dtest="*IntegrationTest"
-  
-- name: Generate Coverage Report
-  run: mvn jacoco:report
-```
+### GitHub Actions
+The [`CI` workflow](.github/workflows/ci.yml) runs on every pull request and every push to `main`:
+
+1. Runs `./mvnw test` on Java 21, which produces the Surefire and JaCoCo reports.
+2. Builds the badge data with [`.github/scripts/badges.py`](.github/scripts/badges.py): test counts,
+   line coverage, and the `pom.xml` version. Results also appear in the job summary.
+3. Uploads the test and coverage reports as the `reports` artifact.
+4. On `main`, pushes the badge JSON to the `badges` branch, which the README badges read through
+   shields.io. It also tags a new `pom.xml` version.
+
+The job fails if any test fails, but the badges are still published, so the tests badge shows
+the failure.
+
+The [`Snyk` workflow](.github/workflows/snyk.yml) runs the dependency and code scans. The same
+scans run locally in the `pre-push` hook (see the [README](README.md#snyk-pre-push-hook)).
 
 ## Troubleshooting Tests
 

@@ -7,6 +7,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -31,12 +34,22 @@ public class SecurityConfig {
                 .defaultSuccessUrl("/transcriber", true)
             )
             .logout(logout -> logout
+                // Keep GET /logout working (the logout button navigates to it); with CSRF
+                // enabled Spring would otherwise only accept POST
+                .logoutRequestMatcher(PathPatternRequestMatcher.withDefaults().matcher("/logout"))
                 .logoutSuccessHandler(logoutSuccessHandler)
                 .invalidateHttpSession(true)
                 .clearAuthentication(true)
                 .deleteCookies("JSESSIONID")
             )
-            .csrf(csrf -> csrf.disable());
+            // Vaadin protects its own requests with its own CSRF token, so Spring's check is
+            // applied to the state-changing calls of the chunked upload REST API
+            .csrf(csrf -> csrf
+                .requireCsrfProtectionMatcher(new AndRequestMatcher(
+                    CsrfFilter.DEFAULT_CSRF_MATCHER,
+                    PathPatternRequestMatcher.withDefaults().matcher("/api/upload/**")
+                ))
+            );
 
         return http.build();
     }

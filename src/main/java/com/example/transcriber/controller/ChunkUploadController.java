@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,6 +23,14 @@ import java.util.Map;
 public class ChunkUploadController {
 
     private final ChunkUploadService chunkUploadService;
+
+    /**
+     * CSRF token the browser uploader sends with its state-changing requests
+     */
+    @GetMapping("/csrf")
+    public Map<String, String> csrfToken(CsrfToken token) {
+        return Map.of("headerName", token.getHeaderName(), "token", token.getToken());
+    }
 
     /**
      * Initialize a new chunked upload session
