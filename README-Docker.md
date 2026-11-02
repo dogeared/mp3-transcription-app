@@ -4,8 +4,25 @@ This document provides instructions for building and running the MP3 Transcriber
 
 ## Prerequisites
 
-- Docker installed on your system
-- Docker Compose (optional, for easier management)
+- Docker with the Compose plugin
+- Java 21 to build the jar. Maven is not needed; the project includes `./mvnw`.
+- A Keycloak client set up as described in the [README](README.md#1-create-the-keycloak-client)
+
+## Build the application jar
+
+The image copies a pre-built jar from `target/`, so build it first. The `production` profile
+bundles the Vaadin frontend:
+
+```bash
+./mvnw -B -Pproduction clean package -DskipTests
+```
+
+Without Java 21 on the host, build in a container instead:
+
+```bash
+docker run --rm -v "$PWD":/src -v "$HOME/.m2":/root/.m2 -w /src maven:3.9-eclipse-temurin-21 \
+  sh -c "mvn -B -Pproduction clean package -DskipTests && chown -R $(id -u):$(id -g) /src"
+```
 
 ## Building the Docker Image
 
@@ -19,9 +36,8 @@ docker build -t mp3-transcriber:latest .
 docker run -d \
   --name mp3-transcriber-app \
   -p 8080:8080 \
-  -e AUTH0_CLIENT_ID="your-client-id" \
-  -e AUTH0_CLIENT_SECRET="your-client-secret" \
-  -e AUTH0_ISSUER_URI="https://your-domain.auth0.com/" \
+  -e KEYCLOAK_ISSUER_URI="https://auth.example.com/realms/my-realm" \
+  -e KEYCLOAK_CLIENT_ID="mp3-transcriber" \
   -e ASSEMBLYAI_API_KEY="your-assemblyai-api-key" \
   mp3-transcriber:latest
 ```
@@ -36,15 +52,19 @@ docker run -d \
 
 2. **Build and run with Docker Compose**:
    ```bash
-   # Build and start the application
-   docker-compose up -d --build
-   
+   # Build and start the application (after building the jar)
+   docker compose up -d --build
+
    # View logs
-   docker-compose logs -f
-   
+   docker compose logs -f
+
    # Stop the application
-   docker-compose down
+   docker compose down
    ```
+
+   The Compose file publishes the app on `127.0.0.1:8081` and joins the external `tnra-shared`
+   network. Create that network once with `docker network create tnra-shared`, or remove it from
+   `docker-compose.yml` if you don't need it.
 
 ## Environment Variables
 
@@ -52,19 +72,25 @@ The following environment variables **MUST** be configured:
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `AUTH0_CLIENT_ID` | Auth0 OAuth2 Client ID | ✅ Yes |
-| `AUTH0_CLIENT_SECRET` | Auth0 OAuth2 Client Secret | ✅ Yes |
-| `AUTH0_ISSUER_URI` | Auth0 OAuth2 Issuer URI | ✅ Yes |
+| `KEYCLOAK_ISSUER_URI` | Keycloak realm issuer, e.g. `https://auth.example.com/realms/my-realm` | ✅ Yes |
+| `KEYCLOAK_CLIENT_ID` | Keycloak client ID (public client, no secret) | ✅ Yes |
 | `ASSEMBLYAI_API_KEY` | AssemblyAI API Key | ✅ Yes |
 | `JAVA_OPTS` | JVM Options | ❌ No (has default) |
 
 **⚠️ IMPORTANT**: The application will not start without the required environment variables!
 
+`KEYCLOAK_ISSUER_URI` must be the public URL that browsers use, and the container must be able to
+reach it. The app checks Keycloak's discovery document at startup, and token issuers must match it
+exactly, so an internal hostname such as `http://keycloak:8080` will not work unless Keycloak is
+configured with that hostname.
+
 ## Accessing the Application
 
 Once the container is running, access the application at:
-- **Application**: http://localhost:8080
-- **Health Check**: http://localhost:8080/actuator/health
+- **Application**: http://localhost:8080 (`docker run`) or http://localhost:8081 (Compose)
+- **Health Check**: `/actuator/health` on the same host and port
+
+Signing in goes through Keycloak, so open the app on a URL registered in the client's redirect URIs.
 
 ## Container Management
 
@@ -79,7 +105,7 @@ docker ps
 docker logs mp3-transcriber-app
 
 # Docker Compose
-docker-compose logs -f mp3-transcriber
+docker compose logs -f mp3-transcriber
 ```
 
 ### Stop the application
@@ -89,7 +115,7 @@ docker stop mp3-transcriber-app
 docker rm mp3-transcriber-app
 
 # Docker Compose
-docker-compose down
+docker compose down
 ```
 
 ### Access container shell (for debugging)
@@ -98,7 +124,7 @@ docker-compose down
 docker exec -it mp3-transcriber-app sh
 
 # Docker Compose
-docker-compose exec mp3-transcriber sh
+docker compose exec mp3-transcriber sh
 ```
 
 ## File Uploads
@@ -115,7 +141,8 @@ The container includes health checks that verify the application is responding c
 
 ## Security Notes
 
-- The container runs as a non-root user (appuser:appgroup)
+- The container runs as root (the image has no `USER`); consider adding a non-root user
+- The app is a public OIDC client, so there is no client secret to protect
 - Sensitive configuration values should be provided via environment variables
 - Consider using Docker secrets or external secret management for production deployments
 
@@ -126,7 +153,8 @@ The container includes health checks that verify the application is responding c
 1. **Container won't start**: Check logs with `docker logs mp3-transcriber-app`
    - Most common cause: Missing required environment variables
 2. **Port already in use**: Change the host port in docker-compose.yml or Docker run command
-3. **OAuth2 authentication fails**: Verify your Auth0 configuration and credentials
+3. **OAuth2 authentication fails**: Check that `KEYCLOAK_ISSUER_URI` matches the realm's `issuer`
+   exactly and that the redirect URI is registered on the Keycloak client
 4. **API calls fail**: Verify your AssemblyAI API key
 5. **Missing environment variables**: Ensure all required variables are set in your .env file
 
@@ -137,6 +165,9 @@ To run with debug logging:
 docker run -d \
   --name mp3-transcriber-app \
   -p 8080:8080 \
+  -e KEYCLOAK_ISSUER_URI="https://auth.example.com/realms/my-realm" \
+  -e KEYCLOAK_CLIENT_ID="mp3-transcriber" \
+  -e ASSEMBLYAI_API_KEY="your-assemblyai-api-key" \
   -e LOGGING_LEVEL_COM_EXAMPLE_TRANSCRIBER=DEBUG \
   mp3-transcriber:latest
 ``` 
