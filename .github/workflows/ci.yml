@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test and coverage
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.results.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Test failures don't stop the build, so the JaCoCo report and badges are still produced;
+      # the job is failed at the end instead
+      - name: Run tests with coverage
+        id: build
+        continue-on-error: true
+        run: ./mvnw -B test -Dmaven.test.failure.ignore=true
+
+      - name: Summarize results and build badges
+        id: results
+        run: python3 .github/scripts/badges.py badges
+
+      - name: Upload badges
+        uses: actions/upload-artifact@v7
+        with:
+          name: badges
+          path: badges/
+
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports
+          path: |
+            target/surefire-reports/
+            target/site/jacoco/
+          if-no-files-found: ignore
+
+      - name: Fail if the build or tests failed
+        if: steps.build.outcome == 'failure' || steps.results.outputs.tests_failed == 'true'
+        run: |
+          echo "::error::Build or tests failed"
+          exit 1
+
+  # Badge JSON lives on the `badges` branch so badge updates never add commits to main.
+  # Runs after failures too, so the tests badge shows them.
+  publish-badges:
+    name: Publish badges
+    needs: test
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-badges
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: badges
+          path: new-badges
+
+      - name: Push to the badges branch
+        env:
+          REPO_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: |
+          if git ls-remote --exit-code --heads "$REPO_URL" badges >/dev/null; then
+            git clone --quiet --depth 1 --branch badges "$REPO_URL" badges
+          else
+            git init --quiet -b badges badges
+            git -C badges remote add origin "$REPO_URL"
+          fi
+          cp new-badges/*.json badges/
+          cd badges
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Badges unchanged"
+          else
+            git commit --quiet -m "Update badges for ${GITHUB_SHA::7}"
+            git push --quiet origin badges
+          fi
+
+  # Keeps git tags in step with the pom: the first green build of a new version tags it
+  tag-version:
+    name: Tag version
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Create tag for the pom version if missing
+        env:
+          VERSION: ${{ needs.test.outputs.version }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null; then
+            echo "Tag $VERSION already exists"
+          else
+            git tag "$VERSION"
+            git push origin "refs/tags/$VERSION"
+            echo "Created tag $VERSION" >> "$GITHUB_STEP_SUMMARY"
+          fi

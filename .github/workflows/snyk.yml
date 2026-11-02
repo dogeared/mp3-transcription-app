@@ -1,0 +1,60 @@
+name: Snyk
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, to catch newly disclosed vulnerabilities in unchanged dependencies
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: snyk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep in sync with .githooks/pre-push
+  SNYK_SEVERITY_THRESHOLD: high
+  SNYK_CLI_VERSION: 1.1308.3
+
+jobs:
+  snyk:
+    name: Snyk scans
+    runs-on: ubuntu-latest
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # Snyk resolves the Maven dependency tree, which needs a JDK
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Install Snyk CLI
+        run: npm install --global "snyk@${SNYK_CLI_VERSION}"
+
+      - name: Check for SNYK_TOKEN
+        run: |
+          if [ -z "$SNYK_TOKEN" ]; then
+            echo "::error::The SNYK_TOKEN repository secret is not set"
+            exit 1
+          fi
+
+      - name: Snyk Open Source (dependencies)
+        run: snyk test --file=pom.xml --severity-threshold="$SNYK_SEVERITY_THRESHOLD"
+
+      # Runs even if the dependency scan failed, so both results are reported
+      - name: Snyk Code (static analysis)
+        if: ${{ !cancelled() }}
+        run: snyk code test --severity-threshold="$SNYK_SEVERITY_THRESHOLD"

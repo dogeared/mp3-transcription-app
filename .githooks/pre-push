@@ -1,0 +1,38 @@
+#!/bin/sh
+# Runs the Snyk dependency and code scans before every push and blocks the push on
+# high or critical issues. Enable once per clone with:
+#   git config core.hooksPath .githooks
+# Skip for a single push with: git push --no-verify
+
+# Keep in sync with SNYK_SEVERITY_THRESHOLD in .github/workflows/snyk.yml
+SEVERITY_THRESHOLD=high
+
+# Nothing to scan when the push only deletes refs
+zero=0000000000000000000000000000000000000000
+has_updates=false
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+    [ "$local_sha" != "$zero" ] && has_updates=true
+done
+[ "$has_updates" = true ] || exit 0
+
+if ! command -v snyk >/dev/null 2>&1; then
+    echo "pre-push: the snyk CLI is not installed." >&2
+    echo "pre-push: install it with 'npm install --global snyk', then run 'snyk auth'." >&2
+    exit 1
+fi
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+status=0
+
+echo "pre-push: snyk test (dependencies, threshold: $SEVERITY_THRESHOLD)"
+snyk test --file=pom.xml --severity-threshold="$SEVERITY_THRESHOLD" || status=1
+
+echo "pre-push: snyk code test (static analysis, threshold: $SEVERITY_THRESHOLD)"
+snyk code test --severity-threshold="$SEVERITY_THRESHOLD" || status=1
+
+if [ "$status" -ne 0 ]; then
+    echo "pre-push: Snyk found issues at or above '$SEVERITY_THRESHOLD'; push blocked." >&2
+    echo "pre-push: fix them, or bypass once with 'git push --no-verify'." >&2
+fi
+exit "$status"
