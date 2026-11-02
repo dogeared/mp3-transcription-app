@@ -119,7 +119,8 @@ src/main/resources/application.properties  # App, upload and Keycloak configurat
 
 ## Security
 
-- Every page except the welcome page requires sign-in.
+- Every page requires sign-in, including the welcome page; visitors are sent straight to Keycloak.
+- Sessions are tracked with cookies only, so session ids never appear in URLs.
 - Sign-in uses the authorization code flow with PKCE (S256). The app is a public client, so there's
   no client secret to manage.
 - Logout uses OIDC RP-initiated logout, ending the Keycloak session as well.
