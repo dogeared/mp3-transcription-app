@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Versions match the
 `<version>` in `pom.xml` and the git tags, which CI creates when a new version reaches `main`.
 
+## [2.0.3] - 2026-11-03
+
+### Fixed
+- The Docker health check always failed, so the container showed as `unhealthy`. `/actuator/health`
+  required sign-in, and the check followed the redirect to the login page. The endpoint is now
+  public. It only reports `UP` or `DOWN`; health details stay hidden.
+
 ## [2.0.2] - 2026-11-02
 
 ### Added
@@ -77,6 +84,7 @@ project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Version
 - OAuth2/OIDC login.
 - Test suite and Docker deployment.
 
+[2.0.3]: https://github.com/dogeared/mp3-transcription-app/compare/2.0.2...2.0.3
 [2.0.2]: https://github.com/dogeared/mp3-transcription-app/compare/2.0.1...2.0.2
 [2.0.1]: https://github.com/dogeared/mp3-transcription-app/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/dogeared/mp3-transcription-app/compare/1.0...2.0.0
