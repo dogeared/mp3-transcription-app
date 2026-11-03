@@ -27,6 +27,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/vaadin/**", "/VAADIN/**").permitAll()
                 .requestMatchers("/images/**", "/icons/**", "/static/**", "/webjars/**").permitAll()
+                // The container health check calls this without a session; it only reports UP/DOWN
+                // (health details stay hidden by default)
+                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                 .requestMatchers("/api/upload/**").authenticated()
                 .anyRequest().authenticated()
             )

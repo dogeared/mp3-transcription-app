@@ -119,6 +119,16 @@ class TranscriberApplicationIntegrationTest {
         assertEquals(302, response.statusCode());
     }
 
+    @Test
+    void healthEndpointIsPublicAndHidesDetails() throws Exception {
+        // The Docker health check calls this without a session
+        HttpResponse<String> response = get("/actuator/health");
+
+        assertEquals(200, response.statusCode());
+        assertTrue(response.body().contains("\"status\":\"UP\""), response.body());
+        assertFalse(response.body().contains("components"), response.body());
+    }
+
     private HttpResponse<String> get(String path) throws Exception {
         return http.send(HttpRequest.newBuilder(url(path)).GET().build(), HttpResponse.BodyHandlers.ofString());
     }
