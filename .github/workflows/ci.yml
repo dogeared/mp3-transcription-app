@@ -122,3 +122,53 @@ jobs:
             git push origin "refs/tags/$VERSION"
             echo "Created tag $VERSION" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+  # Publishes the NAS's copy of this app. The Synology pulls `:latest` on a timer;
+  # `:sha-<short>` and the version tag are there for pinning a rollback.
+  publish:
+    name: Publish image
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # The Dockerfile copies a prebuilt target/*.jar, so build it here.
+      - name: Build jar
+        run: ./mvnw -B -DskipTests package
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/dogeared/mp3-transcriber
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short,prefix=sha-
+            type=raw,value=${{ needs.test.outputs.version }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
